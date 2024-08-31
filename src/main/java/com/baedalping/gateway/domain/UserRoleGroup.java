@@ -71,20 +71,12 @@ public enum UserRoleGroup {
       HttpMethod.POST, Set.of(UserRole.ADMIN, UserRole.OWNER, UserRole.CUSTOMER)
   ));
 
-  private String domain;
-  private Map<HttpMethod, Set<UserRole>> methodRoleMap;
+  private final String domain;
+  private final Map<HttpMethod, Set<UserRole>> methodRoleMap;
 
-  private UserRoleGroup(String domain, Map<HttpMethod, Set<UserRole>> methodRoleMap) {
+  UserRoleGroup(String domain, Map<HttpMethod, Set<UserRole>> methodRoleMap) {
     this.domain = domain;
     this.methodRoleMap = methodRoleMap;
-  }
-
-  public String getDomain() {
-    return domain;
-  }
-
-  public Map<HttpMethod, Set<UserRole>> getMethodRoleMap() {
-    return methodRoleMap;
   }
 
   public static boolean hasPermission(String uriPath, HttpMethod method, String roleName) {
@@ -102,6 +94,14 @@ public enum UserRoleGroup {
         .filter(group -> uriPath.equals(group.getDomain())) // 해당 uriPath로 시작하는 userGroup 찾기
         .findFirst() // 첫 번째 일치하는 그룹을 가져옴
         .map(UserRoleGroup::getMethodRoleMap);
+  }
+
+  public String getDomain() {
+    return domain;
+  }
+
+  public Map<HttpMethod, Set<UserRole>> getMethodRoleMap() {
+    return methodRoleMap;
   }
 
 

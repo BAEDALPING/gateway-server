@@ -33,14 +33,17 @@ public class UserRoleValidationFilter implements GlobalFilter {
   public static final String AUTH_URI = "/auth";
   public static final String AUTHORIZATION_HEADER = "Authorization";
   public static final String BEARER_PREFIX = "Bearer ";
-
+  private final RedisComponent redisComponent;
   @Value("${jwt.secret-key}")
   private String secret;
 
-  private final RedisComponent redisComponent;
-
   public UserRoleValidationFilter(RedisComponent redisComponent) {
     this.redisComponent = redisComponent;
+  }
+
+  public static Key getKey(String secretKey) {
+    byte[] keyByte = secretKey.getBytes(StandardCharsets.UTF_8);
+    return Keys.hmacShaKeyFor(keyByte);
   }
 
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -99,11 +102,6 @@ public class UserRoleValidationFilter implements GlobalFilter {
              | IllegalArgumentException e) {
       throw new DeliveryApplicationException(ErrorCode.INVALID_TOKEN);
     }
-  }
-
-  public static Key getKey(String secretKey) {
-    byte[] keyByte = secretKey.getBytes(StandardCharsets.UTF_8);
-    return Keys.hmacShaKeyFor(keyByte);
   }
 
   private String resolveToken(ServerHttpRequest request) {

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @AllArgsConstructor
 public class UserAuthorityResponseDto implements Serializable {
+
   private String email;
   private String role;
 }
