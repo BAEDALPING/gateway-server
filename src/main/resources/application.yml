@@ -1,18 +1,16 @@
+server:
+  port: 19091
+
 spring:
+  main:
+    web-application-type: reactive
   application:
     name: gateway
   cloud:
     gateway:
-      discovery:
-        locator:
-          enabled: true
       routes:
-        - id: auth-server
-          uri: ${AUTH_SERVER_URI}  # ?? ??? ??? ??? ??
-          predicates:
-            - Path=/auth/**
         - id: order-service
-          uri: ${ORDER_SERVER_URI}  # ?? ??? ??? ??? ??
+          uri: lb://order-service
           predicates:
             - Path=/orders/**
             - Path=/products/**
@@ -23,11 +21,14 @@ spring:
             - Path=/stores/**
             - Path=/storeCategories/**
             - Path=/productCategories/**
-
-server:
-  port: 19091
+      discovery:
+        locator:
+          enabled: true
 
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:19090/eureka/
+
+jwt:
+  secret-key: ${JWT_SECRET}
