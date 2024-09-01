@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -28,9 +29,9 @@ import reactor.core.publisher.Mono;
 
 @Component
 @Slf4j(topic = "UserRoleValidationFilter ")
-public class UserRoleValidationFilter implements GlobalFilter {
+public class UserRoleValidationFilter implements GlobalFilter, Ordered {
 
-  public static final String AUTH_URI = "/auth";
+  public static final String AUTH_URI = "auth";
   public static final String AUTHORIZATION_HEADER = "Authorization";
   public static final String BEARER_PREFIX = "Bearer ";
   private final RedisComponent redisComponent;
@@ -41,14 +42,10 @@ public class UserRoleValidationFilter implements GlobalFilter {
     this.redisComponent = redisComponent;
   }
 
-  public static Key getKey(String secretKey) {
-    byte[] keyByte = secretKey.getBytes(StandardCharsets.UTF_8);
-    return Keys.hmacShaKeyFor(keyByte);
-  }
-
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-    String uri = exchange.getRequest().getURI().getPath().split("/")[0];
+    String uri = exchange.getRequest().getURI().getPath().split("/")[1];
     HttpMethod method = exchange.getRequest().getMethod();
+    log.info("uri : {}", uri);
 
     // 인증이 필요한 URI 경로인지 확인
     if (uri.equals(AUTH_URI)) {
@@ -56,33 +53,28 @@ public class UserRoleValidationFilter implements GlobalFilter {
     }
 
     // 1. JWT 토큰 검증
-    return Mono.justOrEmpty(resolveToken(exchange.getRequest()))
-        .flatMap(token -> {
-          try {
-            String email = getSignature(token);
-            log.info("user signature : {}", email);
+    String token = resolveToken(exchange.getRequest());
+    log.info("{}", token);
 
-            // 2. 요청 api의 접근권한과 로그인한 유저의 유저권한을 가지고 있는 redis에서 조회한 권한과 동일한지 검증
-            UserAuthorityResponseDto userAuthority = redisComponent.getUserAuthorityFromRedis(email)
-                .orElseThrow(() -> new DeliveryApplicationException(
-                    ErrorCode.NOT_FOUND_USER));// 로그인한 유저권한에서 찾아올 수 없어 예외 발생
+    try {
+      String email = getSignature(token);
+      log.info("User signature: {}", email);
 
-            if (hasPermission(uri, method, userAuthority.getRole())) {
-              // 권한이 있는 경우, 헤더 추가 및 필터 체인 통과
-              exchange.getResponse().getHeaders().add("requestedUserEmail", email);
-              return chain.filter(exchange); // 필터 체인의 다음 단계로 진행
-            } else {
-              return Mono.error(new DeliveryApplicationException(
-                  ErrorCode.NOT_PERMISSION)); // API 접근 권한이 없으면 예외 발생
-            }
-          } catch (Exception e) {
-            return Mono.error(e);
-          }
-        })
-        .switchIfEmpty(
-            Mono.error(
-                new DeliveryApplicationException(ErrorCode.INVALID_TOKEN))); // 토큰이 없을 경우 에러 처리
-  }
+      // 2. 요청 API의 접근 권한과 로그인한 유저의 권한을 가지고 있는 Redis에서 조회한 권한과 동일한지 검증
+      UserAuthorityResponseDto userAuthority = redisComponent.getUserAuthorityFromRedis(email)
+          .orElseThrow(() -> new DeliveryApplicationException(ErrorCode.NOT_FOUND_USER));
+
+      if (hasPermission(uri, method, userAuthority.getRole())) {
+        exchange.getRequest().mutate()
+            .header("requestedUserEmail", email)
+            .build();
+        return chain.filter(exchange); // 필터 체인의 다음 단계로 진행
+      } else {
+        return Mono.error(new DeliveryApplicationException(ErrorCode.NOT_PERMISSION));
+      }
+    } catch (Exception e) {
+      return Mono.error(e);
+    }}
 
   private String getSignature(String token) {
     try {
@@ -104,11 +96,21 @@ public class UserRoleValidationFilter implements GlobalFilter {
     }
   }
 
+  private static Key getKey(String secretKey) {
+    byte[] keyByte = secretKey.getBytes(StandardCharsets.UTF_8);
+    return Keys.hmacShaKeyFor(keyByte);
+  }
+
   private String resolveToken(ServerHttpRequest request) {
     String token = request.getHeaders().getFirst(AUTHORIZATION_HEADER);
     if (StringUtils.hasText(token) && token.startsWith(BEARER_PREFIX)) {
       return token.split(" ")[1].trim();
     }
     throw new DeliveryApplicationException(ErrorCode.NOT_AUTH);
+  }
+
+  @Override
+  public int getOrder() {
+    return HIGHEST_PRECEDENCE;
   }
 }
