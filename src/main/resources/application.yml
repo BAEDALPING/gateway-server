@@ -12,15 +12,7 @@ spring:
         - id: order-service
           uri: lb://order-service
           predicates:
-            - Path=/orders/**
-            - Path=/products/**
-            - Path=/users/**
-            - Path=/payments/**
-            - Path=/cart/**
-            - Path=/admin/**
-            - Path=/stores/**
-            - Path=/storeCategories/**
-            - Path=/productCategories/**
+            - Path=/**
       discovery:
         locator:
           enabled: true
