@@ -1,6 +1,7 @@
 package com.baedalping.gateway.security;
 
 import com.baedalping.gateway.domain.UserAuthorityResponseDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -22,9 +23,11 @@ public class RedisComponent {
     if (cache != null) {
       Cache.ValueWrapper valueWrapper = cache.get(email);
       if (valueWrapper != null) {
-        return Optional.of((UserAuthorityResponseDto) valueWrapper.get());
+        UserAuthorityResponseDto cachedValue = (UserAuthorityResponseDto) valueWrapper.get();
+        log.info("redis role: {}", cachedValue.getRole());
+        return Optional.of(cachedValue);
       }
     }
-    return Optional.empty(); // 캐시에 값이 없으면 null 반환
+    return Optional.empty();
   }
 }
