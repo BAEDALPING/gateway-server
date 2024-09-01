@@ -48,7 +48,7 @@ public enum UserRoleGroup {
       HttpMethod.DELETE, Set.of(UserRole.ADMIN, UserRole.OWNER, UserRole.CUSTOMER)
   )),
   OWNER_ORDER_ENDPOINT("owner", Map.of(
-      HttpMethod.GET, Set.of(UserRole.ADMIN, UserRole.OWNER, UserRole.CUSTOMER)
+      HttpMethod.GET, Set.of(UserRole.ADMIN, UserRole.OWNER)
   )),
   PAYMENT_ENDPOINT("payments", Map.of(
       HttpMethod.GET, Set.of(UserRole.CUSTOMER),
@@ -66,6 +66,11 @@ public enum UserRoleGroup {
       HttpMethod.POST, Set.of(UserRole.CUSTOMER),
       HttpMethod.PUT, Set.of(UserRole.CUSTOMER),
       HttpMethod.DELETE, Set.of(UserRole.CUSTOMER)
+  )),
+  REVIEWS_ENDPOINT("reviews", Map.of(
+      HttpMethod.GET, Set.of(UserRole.CUSTOMER),
+      HttpMethod.POST, Set.of(UserRole.CUSTOMER),
+      HttpMethod.PATCH, Set.of(UserRole.CUSTOMER)
   )),
   AUTH_ENDPOINT("auth", Map.of(
       HttpMethod.POST, Set.of(UserRole.ADMIN, UserRole.OWNER, UserRole.CUSTOMER)
